@@ -45,29 +45,21 @@ branches = Dict("llvm_release_80" => "bb96964181723d32dfe61ef7780dcbdf0f931ccf")
 
 # Bash recipe for building across all platforms
 script = raw"""
-# FIXME: the CMake files in the LLVM build aren't relocatable, so move to the destdir
-#        https://github.com/staticfloat/LLVMBuilder/issues/50
-real_prefix="$WORKSPACE/real_destdir"
-mv "${prefix}" "${real_prefix}"
-# FIXME: the LLVM archives don't have a containing directory, so move srcdir in its entirety
-#        https://github.com/staticfloat/LLVMBuilder/issues/49
-mv "$WORKSPACE/srcdir" "${prefix}"
-mkdir "$WORKSPACE/srcdir"
-mv "${prefix}/SPIRV-LLVM-Translator" "$WORKSPACE/srcdir"
+# FIXME: LLVMBuilder output isn't intended to be used as a build source,
+#        and extracts right into the srcdir without containing directory.
+# FIXME: LLVMExports.cmake doesn't seem relocatable (although there's some logic for it)
+sed -i "s#${prefix}#${WORKSPACE}/srcdir#g" "${WORKSPACE}/srcdir/lib/cmake/llvm/"*.cmake
 
 cd $WORKSPACE/srcdir/SPIRV-LLVM-Translator
 mkdir build && cd build
-cmake .. -DCMAKE_INSTALL_PREFIX="${real_prefix}" \
+cmake .. -DCMAKE_INSTALL_PREFIX="${prefix}" \
          -DCMAKE_TOOLCHAIN_FILE="${CMAKE_TARGET_TOOLCHAIN}" \
-         -DLLVM_DIR="${prefix}/lib/cmake/llvm"
+         -DLLVM_DIR="${WORKSPACE}/srcdir/lib/cmake/llvm"
 make llvm-spirv -j${nproc}
 make install
 # FIXME: how to install tools? LLVM_TOOLS_INSTALL_DIR and LLVM_BUILD_TOOLS are ignored
-mkdir "${real_prefix}/bin" && cp tools/llvm-spirv/llvm-spirv "${real_prefix}/bin"
+mkdir "${prefix}/bin" && cp tools/llvm-spirv/llvm-spirv "${prefix}/bin"
 cd ..
-
-rm -rf ${prefix}
-mv ${real_prefix} ${prefix}
 
 install_license LICENSE.TXT
 """
