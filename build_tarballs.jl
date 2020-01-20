@@ -50,7 +50,7 @@ function main(args::Vector=String[])
         ]
 
         # Build the tarballs, and possibly a `build.jl` as well.
-        build_tarballs(args, name, version, sources, script, platforms, products, dependencies; preferred_gcc_version=v"6")
+        build_tarballs(args, name, version, sources, script, platforms, products, dependencies; preferred_gcc_version=v"7")
     end
 end
 
